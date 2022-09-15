@@ -14,12 +14,39 @@ import static android.os.BatteryManager.BATTERY_STATUS_DISCHARGING;
 import static android.os.BatteryManager.BATTERY_STATUS_FULL;
 import static android.os.BatteryManager.BATTERY_STATUS_NOT_CHARGING;
 import static android.os.BatteryManager.BATTERY_STATUS_UNKNOWN;
+import static android.os.BatteryManager.EXTRA_HEALTH;
+import static android.os.BatteryManager.EXTRA_LEVEL;
+import static android.os.BatteryManager.EXTRA_PLUGGED;
+import static android.os.BatteryManager.EXTRA_PRESENT;
+import static android.os.BatteryManager.EXTRA_SCALE;
+import static android.os.BatteryManager.EXTRA_STATUS;
+import static android.os.BatteryManager.EXTRA_TECHNOLOGY;
+import static android.os.BatteryManager.EXTRA_TEMPERATURE;
+import static android.os.BatteryManager.EXTRA_VOLTAGE;
+
+import android.content.Intent;
 
 import androidx.annotation.NonNull;
 
 import org.jetbrains.annotations.Contract;
 
 public class Battery {
+
+    @NonNull
+    public static com.kma.batteryoptimization.data.model.Battery getBattery(@NonNull Intent intent) {
+        final com.kma.batteryoptimization.data.model.Battery battery = new com.kma.batteryoptimization.data.model.Battery();
+
+        battery.setHealthStatus(intent.getIntExtra(EXTRA_HEALTH, BATTERY_HEALTH_UNKNOWN));
+        battery.setLevel(intent.getIntExtra(EXTRA_LEVEL, 0));
+        battery.setScale(intent.getIntExtra(EXTRA_SCALE, 100));
+        battery.setPlugged(intent.getIntExtra(EXTRA_PLUGGED, 0));
+        battery.setPresent(intent.getBooleanExtra(EXTRA_PRESENT, false));
+        battery.setStatus(intent.getIntExtra(EXTRA_STATUS, BATTERY_STATUS_UNKNOWN));
+        battery.setTechnology(intent.getStringExtra(EXTRA_TECHNOLOGY));
+        battery.setTemperature(intent.getIntExtra(EXTRA_TEMPERATURE, Integer.MIN_VALUE));
+        battery.setVoltage(intent.getIntExtra(EXTRA_VOLTAGE, Integer.MIN_VALUE));
+        return battery;
+    }
 
     @NonNull
     @Contract(pure = true)
