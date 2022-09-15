@@ -25,6 +25,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.kma.batteryoptimization.R;
 import com.kma.batteryoptimization.data.model.Battery;
@@ -33,8 +34,9 @@ import com.kma.batteryoptimization.data.receiver.BatteryReceiver;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LocationListener {
     private TextView tvBatteryProfile;
 
     private TextView tvNetworkProfile;
@@ -60,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
 
         getCurrentBatteryProfile();
         getCurrentNetworkProfile();
-        requestPermissions(new String[]{ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION}, 1000);
     }
 
     private String getBatteryProfile(Battery battery) {
@@ -117,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         registerReceiver(batteryReceiver, new IntentFilter(ACTION_BATTERY_CHANGED));
+        requestLocationUpdates();
     }
 
     @Override
@@ -131,8 +133,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @SuppressLint("SetTextI18n")
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+        Log.d("MainActivity", location.toString());
+        tvLocation.setText(
+            "Provider: " + location.getProvider() + "\n" +
+            "\t\tLatitude: " + location.getLatitude() + "\n" +
+            "\t\tLongitude: " + location.getLongitude()
+        );
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d("MainActivity", provider + " change status to " + status + ".");
+    }
+
+    @Override
+    public void onProviderEnabled(@NonNull String provider) {
+        Log.d("MainActivity", provider + " is enabled.");
+    }
+
+    @Override
+    public void onProviderDisabled(@NonNull String provider) {
+        Log.d("MainActivity", provider + " is disabled.");
+    }
+
     private void requestLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION) != PERMISSION_GRANTED) {
+            requestPermissions(new String[]{ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION}, 1000);
+            return;
+        }
+
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         List<String> providers = locationManager.getAllProviders();
 
@@ -140,42 +172,19 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        LocationListener locationListener = new LocationListener() {
-
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                Log.d("MainActivity", location.toString());
-                tvLocation.setText("Latitude: " + location.getLatitude() + "\nLongitude: " + location.getLongitude());
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-                LocationListener.super.onStatusChanged(provider, status, extras);
-                Log.d("MainActivity", provider + " change status to " + status + ".");
-            }
-
-            @Override
-            public void onProviderEnabled(@NonNull String provider) {
-                LocationListener.super.onProviderEnabled(provider);
-                Log.d("MainActivity", provider + " is enabled.");
-            }
-
-            @Override
-            public void onProviderDisabled(@NonNull String provider) {
-                LocationListener.super.onProviderDisabled(provider);
-                Log.d("MainActivity", provider + " is disabled.");
-            }
-        };
+        long minTime = TimeUnit.SECONDS.toMillis(5);
 
         providers.forEach(provider -> {
             Log.d("MainActivity", "Requesting location updates on " + provider);
-            locationManager.requestLocationUpdates(provider, 0, 0, locationListener);
+            locationManager.requestLocationUpdates(provider, minTime, 0, this);
         });
     }
 
     @Override
     protected void onPause() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        locationManager.removeUpdates(this);
         unregisterReceiver(batteryReceiver);
         super.onPause();
     }
