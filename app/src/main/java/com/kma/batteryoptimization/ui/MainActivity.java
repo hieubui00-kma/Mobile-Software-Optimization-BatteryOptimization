@@ -6,12 +6,15 @@ import static com.kma.batteryoptimization.util.Battery.getBatteryHealthStatus;
 import static com.kma.batteryoptimization.util.Battery.getBatteryPlugged;
 import static com.kma.batteryoptimization.util.Battery.getBatteryStatus;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.kma.batteryoptimization.R;
@@ -23,6 +26,8 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private TextView tvBatteryProfile;
 
+    private TextView tvNetworkProfile;
+
     private BatteryReceiver batteryReceiver;
 
     @Override
@@ -30,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         tvBatteryProfile = findViewById(R.id.tv_battery_profile);
+        tvNetworkProfile = findViewById(R.id.tv_network_profile);
         batteryReceiver = new BatteryReceiver();
 
         batteryReceiver.getBattery().observe(this, battery -> {
@@ -39,15 +45,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         getCurrentBatteryProfile();
+        getCurrentNetworkProfile();
     }
 
-    @NonNull
-    private String getBatteryProfile(@NonNull Battery battery) {
+    private String getBatteryProfile(Battery battery) {
+        if (battery == null) {
+            return null;
+        }
+
         float percentage = battery.getScale() == 0 ? 0.0f : 100 * (battery.getLevel() / (float) battery.getScale());
         String level = String.format(Locale.getDefault(), "%d/%d (%.2f%%)", battery.getLevel(), battery.getScale(), percentage);
 
-        return "Battery Profile:\n" +
-            "Health: " + getBatteryHealthStatus(battery.getHealthStatus()) + "\n" +
+        return "Health: " + getBatteryHealthStatus(battery.getHealthStatus()) + "\n" +
             "Level: " + level + "\n" +
             "Power source: " + getBatteryPlugged(battery.getPlugged()) + "\n" +
             "Present: " + (battery.isPresent() ? "Yes" : "No") + "\n" +
@@ -68,6 +77,25 @@ public class MainActivity extends AppCompatActivity {
         String batteryProfile = getBatteryProfile(battery);
 
         tvBatteryProfile.setText(batteryProfile);
+    }
+
+    private void getCurrentNetworkProfile() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network[] networks = connectivityManager.getAllNetworks();
+        StringBuilder networkProfileBuilder = new StringBuilder();
+        NetworkInfo networkInfo;
+        String networkProfile;
+
+        for (Network network : networks) {
+            networkInfo = connectivityManager.getNetworkInfo(network);
+            networkProfileBuilder.append("Type: ").append(networkInfo.getTypeName()).append("\n")
+                .append("\t\t- State: ").append(networkInfo.getState()).append("\n")
+                .append("\t\t- Available: ").append(networkInfo.isAvailable()).append("\n")
+                .append("\t\t- Roaming: ").append(networkInfo.isRoaming()).append("\n")
+                .append("\n");
+        }
+        networkProfile = networkProfileBuilder.toString();
+        tvNetworkProfile.setText(networkProfile.isEmpty() ? null : networkProfile);
     }
 
     @Override
